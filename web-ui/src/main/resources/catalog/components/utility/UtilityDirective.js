@@ -862,7 +862,8 @@
         }
         ngModel.$parsers.push(into);
         ngModel.$formatters.push(out);
-
+        
+        scope.gnValue = attr.gnValue;
       }
     };
   });
