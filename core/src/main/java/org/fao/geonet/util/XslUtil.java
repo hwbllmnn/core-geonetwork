@@ -519,6 +519,7 @@ public final class XslUtil
     public static String getLanguage() {
         ServiceContext context = ServiceContext.get();
         return context.getLanguage();
+    }
 
     public static String encodeForJson(String str) {
         if(str != null && str.length() != 0) {
