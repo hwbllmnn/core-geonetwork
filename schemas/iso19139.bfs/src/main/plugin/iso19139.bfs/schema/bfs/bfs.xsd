@@ -315,6 +315,7 @@
 					<xs:element name="allowedValues" type="gco:CharacterString_PropertyType"/>
 					<xs:element name="operator" type="gco:CharacterString_PropertyType"/>
 					<xs:element name="allowMultipleSelect" type="gco:Boolean_PropertyType"/>
+                                        <xs:element name="encodeInViewParams" type="gco:Boolean_PropertyType"/>
 				</xs:sequence>
 			</xs:extension>
 		</xs:complexContent>

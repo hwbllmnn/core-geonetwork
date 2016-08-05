@@ -117,7 +117,8 @@
     "defaultValue":"<xsl:apply-templates select="bfs:defaultValue/gco:CharacterString" />",
     "allowedValues":"<xsl:apply-templates select="bfs:allowedValues/gco:CharacterString" />",
     "operator":"<xsl:apply-templates select="bfs:operator/gco:CharacterString" />",
-    "allowMultipleSelect":"<xsl:apply-templates select="bfs:allowMultipleSelect/gco:Boolean" />"
+    "allowMultipleSelect":"<xsl:apply-templates select="bfs:allowMultipleSelect/gco:Boolean" />",
+    "encodeInViewParams":"<xsl:apply-templates select="bfs:encodeInViewParams/gco:Boolean" />"
   }
   </xsl:template>
 
