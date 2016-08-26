@@ -266,7 +266,10 @@
             xpath="/bfs:MD_Metadata/gmd:identificationInfo/*/gmd:citation/gmd:CI_Citation/gmd:title"/>
 
           <field
-            xpath="/bfs:MD_Metadata/bfs:layerInformation/bfs:MD_Layer/bfs:inspireID"/>
+            xpath="/bfs:MD_Metadata/bfs:layerInformation/bfs:MD_Layer/bfs:legendTitle"/>
+
+          <field
+            xpath="/bfs:MD_Metadata/bfs:layerInformation/bfs:MD_Layer/bfs:printTitle"/>
 
           <field
             xpath="/bfs:MD_Metadata/bfs:layerInformation/bfs:MD_Layer/bfs:layerType" or="layerType" in="/bfs:MD_Metadata/bfs:layerInformation/bfs:MD_Layer"/>

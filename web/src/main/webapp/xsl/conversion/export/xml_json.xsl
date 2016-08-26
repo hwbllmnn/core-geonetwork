@@ -15,7 +15,8 @@
 {
   "id": "<xsl:apply-templates select="gmd:fileIdentifier/gco:CharacterString" />",
   "dspTxt": "<xsl:apply-templates select="gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString" />",
-  "inspireId": "<xsl:apply-templates select="bfs:layerInformation/bfs:MD_Layer/bfs:inspireID/gco:CharacterString" />",
+  "legendTitle": "<xsl:apply-templates select="bfs:layerInformation/bfs:MD_Layer/bfs:legendTitle/gco:CharacterString" />",
+  "printTitle": "<xsl:apply-templates select="bfs:layerInformation/bfs:MD_Layer/bfs:printTitle/gco:CharacterString" />", 
   "filters": [
     <xsl:for-each select="bfs:layerInformation/bfs:MD_Layer/bfs:filter[bfs:*]">
       <xsl:apply-templates select="." /><xsl:if test="position() != last()">,</xsl:if>
