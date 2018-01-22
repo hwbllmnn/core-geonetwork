@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 (function() {
   goog.provide('ga_print_directive');
 
@@ -78,7 +101,9 @@
 
       var refreshComp = function() {
         updatePrintRectanglePixels($scope.scale);
-        $scope.map.render();
+        if ($scope.map) {
+          $scope.map.render();
+        }
       };
 
       // Compose events
@@ -155,14 +180,14 @@
               resolution >= minResolution) {
             if (src instanceof ol.source.WMTS) {
               encLayer = $scope.encoders.layers['WMTS'].call(this,
-                  layer, layerConfig);
+                  layer, layerConfig, proj);
             } else if (src instanceof ol.source.OSM) {
               encLayer = $scope.encoders.layers['OSM'].call(this,
                   layer, layerConfig);
             } else if (src instanceof ol.source.ImageWMS ||
                 src instanceof ol.source.TileWMS) {
               encLayer = $scope.encoders.layers['WMS'].call(this,
-                  layer, layerConfig);
+                  layer, layerConfig, proj);
             } else if (layer instanceof ol.layer.Vector) {
               var features = [];
               src.forEachFeatureInExtent(ext, function(feat) {
@@ -523,7 +548,7 @@
             enc.classes.push({
               name: '',
               icon: $scope.options.legendUrl +
-                  layer.bodId + '_' + $translate.uses() + format
+                  layer.bodId + '_' + $translate.use() + format
             });
             return enc;
           },
@@ -553,7 +578,7 @@
         bodyEl.addClass(waitclass);
         var view = $scope.map.getView();
         var proj = view.getProjection();
-        var lang = $translate.uses();
+        var lang = $translate.use();
         var defaultPage = {};
         defaultPage['lang' + lang] = true;
         var encLayers = [];
@@ -722,7 +747,7 @@
         if (newVal === 'thumbnailMaker') {
           activate();
         } else {
-          //        deactivate();
+          deactivate();
         }
       });
     }]);

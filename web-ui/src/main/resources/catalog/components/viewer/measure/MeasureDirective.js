@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 (function() {
   goog.provide('gn_measure');
 
@@ -195,11 +218,36 @@
 
       this.create = function(map, measureObj, scope) {
 
+        var wgs84Sphere = new ol.Sphere(6378137);
+
+        // taken from https://openlayers.org/en/v3.15.0/examples/measure.html
+        getGeodesicLength = function(geometry) {
+          var sourceProj = map.getView().getProjection();
+          var coordinates = geometry.getCoordinates();
+          length = 0;
+          for (var i = 0, ii = coordinates.length - 1; i < ii; ++i) {
+            var c1 = ol.proj.transform(coordinates[i],
+                sourceProj, 'EPSG:4326');
+            var c2 = ol.proj.transform(coordinates[i + 1],
+                sourceProj, 'EPSG:4326');
+            length += wgs84Sphere.haversineDistance(c1, c2);
+          }
+          return length;
+        };
+        getGeodesicArea = function(geometry) {
+          var sourceProj = map.getView().getProjection();
+          var geom = geometry.clone().transform(
+              sourceProj, 'EPSG:4326');
+          var coordinates = geom.getLinearRing(0).getCoordinates();
+          area = Math.abs(wgs84Sphere.geodesicArea(coordinates));
+          return area;
+        };
+
         // Update values of measures from features
         updateMeasuresFn = function() {
           scope.$apply(function() {
-            measureObj.distance = distFeature.getGeometry().getLength();
-            measureObj.surface = areaFeature.getGeometry().getArea();
+            measureObj.distance = getGeodesicLength(distFeature.getGeometry());
+            measureObj.surface = getGeodesicArea(areaFeature.getGeometry());
           });
         };
         initInteraction(map);

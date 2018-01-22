@@ -1,6 +1,31 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 package org.fao.geonet.services.main;
 
 import java.nio.file.Path;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -8,6 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.io.FileUtils;
 import org.fao.geonet.ApplicationContextHolder;
 import org.fao.geonet.Util;
 import org.fao.geonet.exceptions.FileUploadTooBigEx;
@@ -24,38 +50,21 @@ import jeeves.server.UserSession;
 import jeeves.server.dispatchers.ServiceManager;
 import jeeves.server.sources.ServiceRequest;
 import jeeves.server.sources.ServiceRequestFactory;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartRequest;
 
 @Controller
 public class GenericController {
     public static final String USER_SESSION_ATTRIBUTE_KEY = Jeeves.Elem.SESSION;
-    
-    /**
-     * Detect crawlers. Useful to avoid creating sessions for them.
-     */
-    private Pattern regex = Pattern.compile(ServiceManager.BOT_REGEXP, Pattern.CASE_INSENSITIVE);
 
     @RequestMapping(value = "/{lang}/{service}")
     @ResponseBody
     public void dispatch(@PathVariable String lang,
                          @PathVariable String service, HttpServletRequest request,
                          HttpServletResponse response)
-            throws Exception {
+        throws Exception {
         HttpSession httpSession = request.getSession(false);
-        
-        String userAgent = request.getHeader("user-agent");
-        
-        Matcher m = regex.matcher(userAgent);
-        boolean notCrawler = !m.find();
-        
-        
-        if(httpSession == null && notCrawler) {
-            httpSession = request.getSession(true);
-        } else if(httpSession != null && !notCrawler) {
-            //Shouldn't get here, but in any case, free the memory
-            request.getSession().invalidate();
-            httpSession = null;
-        }
-        
+
         String ip = request.getRemoteAddr();
         // if we do have the optional x-forwarded-for request header then
         // use whatever is in it to record ip address of client
@@ -65,7 +74,7 @@ public class GenericController {
 
         Log.info(Log.REQUEST, "==========================================================");
 
-        Log.info(Log.REQUEST,  "HTML Request (from " + ip + ") : " + request.getRequestURI());
+        Log.info(Log.REQUEST, "HTML Request (from " + ip + ") : " + request.getRequestURI());
         if (Log.isDebugEnabled(Log.REQUEST)) {
             Log.debug(Log.REQUEST, "Method       : " + request.getMethod());
             Log.debug(Log.REQUEST, "Content type : " + request.getContentType());
@@ -78,26 +87,26 @@ public class GenericController {
         }
 
         if (Log.isDebugEnabled(Log.REQUEST)) {
-            if(httpSession != null) {
+            if (httpSession != null) {
                 Log.debug(Log.REQUEST, "Session id is " + httpSession.getId());
             } else {
-                Log.debug(Log.REQUEST, "No session created");                
+                Log.debug(Log.REQUEST, "No session created");
             }
         }
 
         UserSession session = null;
-        
-        if(httpSession != null) {
+
+        if (httpSession != null) {
             session = (UserSession) httpSession.getAttribute(USER_SESSION_ATTRIBUTE_KEY);
-    
+
             if (session == null) {
                 // --- create session
-    
+
                 session = new UserSession();
-    
+
                 httpSession.setAttribute(USER_SESSION_ATTRIBUTE_KEY, session);
                 session.setsHttpSession(httpSession);
-    
+
                 if (Log.isDebugEnabled(Log.REQUEST))
                     Log.debug(Log.REQUEST, "Session created for client : " + ip);
             }
@@ -136,7 +145,22 @@ public class GenericController {
         }
 
         // --- execute request
+        try {
+            jeeves.dispatch(srvReq, session);
+        } finally {
+            // Cleanup uploaded resources
+            if (request instanceof MultipartRequest) {
+                Map<String, MultipartFile> files = ((MultipartRequest) request).getFileMap();
+                Iterator<Map.Entry<String, MultipartFile>> it =
+                        files.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry<String, MultipartFile> file = it.next();
 
-        jeeves.dispatch(srvReq, session);
+                    Path uploadedFile = jeeves.getUploadDir().resolve(file.getValue().getOriginalFilename());
+                    FileUtils.deleteQuietly(uploadedFile.toFile());
+                }
+            }
+
+        }
     }
 }

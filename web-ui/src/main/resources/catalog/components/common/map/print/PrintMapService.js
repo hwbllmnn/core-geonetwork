@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 (function() {
   goog.provide('gn_printmap_service');
 
@@ -8,13 +31,14 @@
     var self = this;
 
     var options = {
-      heightMargin: 0,
-      widthMargin: 0
+      heightMargin: 100,
+      widthMargin: 100
     };
 
     var DPI = 72;
     var MM_PER_INCHES = 25.4;
     var UNITS_RATIO = 39.37;
+    var METERS_PER_DEGREE = 111319.49079327358;
 
     /**
      * Get the map coordinates of the center of the given print rectangle.
@@ -46,8 +70,9 @@
       var s = parseFloat(scale.value);
       var size = layout.map; // papersize in dot!
       var view = map.getView();
-      var center = view.getCenter();
-      var resolution = view.getResolution();
+      var ratio = map.getView().getProjection().getCode() == 'EPSG:4326' ?
+          METERS_PER_DEGREE : 1;
+      var resolution = view.getResolution() * ratio;
       var w = size.width / DPI * MM_PER_INCHES / 1000.0 * s / resolution;
       var h = size.height / DPI * MM_PER_INCHES / 1000.0 * s / resolution;
       var mapSize = map.getSize();
@@ -73,7 +98,9 @@
      */
     this.getOptimalScale = function(map, scales, layout) {
       var size = map.getSize();
-      var resolution = map.getView().getResolution();
+      var ratio = map.getView().getProjection().getCode() == 'EPSG:4326' ?
+          METERS_PER_DEGREE : 1;
+      var resolution = map.getView().getResolution() * ratio;
       var width = resolution * (size[0] - (options.widthMargin * 2));
       var height = resolution * (size[1] - (options.heightMargin * 2));
       var layoutSize = layout.map;
@@ -136,21 +163,25 @@
           var encFeatures = [];
           var stylesDict = {};
           var styleId = 0;
-          var hasLayerStyleFunction = !!(layer.getStyleFunction &&
-              layer.getStyleFunction());
 
           angular.forEach(features, function(feature) {
             var encStyle = {
               id: styleId
             };
 
-            var hasLayerStyleFunction = !!(feature.getStyleFunction &&
-                feature.getStyleFunction());
-
-            var styles = (hasLayerStyleFunction) ?
-                feature.getStyleFunction()(feature) :
-                ol.feature.defaultStyleFunction(feature);
-
+            var styles, featureStyle = feature.get('_style');
+            if (angular.isFunction(featureStyle)) {
+              styles = featureStyle(feature);
+            }
+            else if (angular.isArray(featureStyle)) {
+              styles = featureStyle;
+            }
+            else if (featureStyle) {
+              styles = [featureStyle];
+            }
+            else {
+              styles = ol.style.defaultStyleFunction(feature);
+            }
 
             var geometry = feature.getGeometry();
 
@@ -191,7 +222,7 @@
           });
           return enc;
         },
-        'WMS': function(layer, config) {
+        'WMS': function(layer, config, proj) {
           var enc = self.encoders.
               layers['Layer'].call(this, layer);
           var params = layer.getSource().getParams();
@@ -199,7 +230,7 @@
           var styles = (params.STYLES !== undefined) ?
               params.STYLES.split(',') :
               new Array(layers.length).join(',').split(',');
-          var url = layer instanceof ol.source.ImageWMS ?
+          var url = layer.getSource() instanceof ol.source.ImageWMS ?
               layer.getSource().getUrl() :
               layer.getSource().getUrls()[0];
           angular.extend(enc, {
@@ -212,7 +243,7 @@
             customParams: {
               'EXCEPTIONS': 'XML',
               'TRANSPARENT': 'true',
-              'CRS': 'EPSG:3857',
+              'CRS': proj.getCode(),
               'TIME': params.TIME
             },
             singleTile: config.singleTile || false
@@ -255,25 +286,7 @@
           });
           return enc;
         },
-        'MapQuest': function(layer, config) {
-          var enc = self.encoders.
-              layers['Layer'].call(this, layer);
-          angular.extend(enc, {
-            type: 'OSM',
-            baseURL: 'http://otile1-s.mqcdn.com/tiles/1.0.0/osm',
-            extension: 'png',
-            // Hack to return an extent for the base
-            // layer in case of undefined
-            maxExtent: layer.getExtent() ||
-                [-20037508.34, -20037508.34, 20037508.34, 20037508.34],
-            resolutions: layer.getSource().tileGrid.getResolutions(),
-            tileSize: [
-              layer.getSource().tileGrid.getTileSize(),
-              layer.getSource().tileGrid.getTileSize()]
-          });
-          return enc;
-        },
-        'WMTS': function(layer, config) {
+        'WMTS': function(layer, config, proj) {
           // sextant specific
           var enc = self.encoders.layers['Layer'].
               call(this, layer);
@@ -281,9 +294,10 @@
           var tileGrid = source.getTileGrid();
           var matrixSet = source.getMatrixSet();
           var matrixIds = new Array(tileGrid.getResolutions().length);
+          var layerUrl = layer.get('url');
           for (var z = 0; z < tileGrid.getResolutions().length; ++z) {
-            var mSize = (ol.extent.getWidth(ol.proj.get('EPSG:3857').
-                getExtent()) /tileGrid.getTileSize()) /
+            var mSize = (ol.extent.getWidth(proj.getExtent()) /
+                tileGrid.getTileSize()) /
                 tileGrid.getResolutions()[z];
                 matrixIds[z] = {
                   identifier: tileGrid.getMatrixIds()[z],
@@ -294,12 +308,27 @@
                 };
           }
 
+          // workaround for Mapfish v2.1.2 with REST and matrixIds
+          if (matrixIds.length > 0) {
+            if (/{style}/ig.test(decodeURI(layerUrl))) {
+              layerUrl = encodeURI(decodeURI(layerUrl).replace(/{style}/ig,
+                  source.getStyle()));
+            }
+            if (/layer/ig.test(decodeURI(layerUrl))) {
+              layerUrl = encodeURI(decodeURI(layerUrl).replace(/{layer}/ig,
+                  source.getLayer()));
+            }
+          }
+
           angular.extend(enc, {
             type: 'WMTS',
-            baseURL: layer.get('url'),
+            baseURL: layerUrl,
             layer: source.getLayer(),
             version: source.getVersion(),
-            requestEncoding: 'KVP',
+            requestEncoding: source.getRequestEncoding() || 'KVP',
+            // Dimensions is not a mandatory parameter
+            // but it is required by Mapfish v2.1.2 if requestEncoding is REST
+            dimensions: [],
             format: source.getFormat(),
             style: source.getStyle(),
             matrixSet: matrixSet,
@@ -448,7 +477,6 @@
 
       if (textStyle) {
         var fillColor = ol.color.asArray(textStyle.getFill().getColor());
-        var strokeColor = ol.color.asArray(textStyle.getStroke().getColor());
         var fontValues = textStyle.getFont().split(' ');
         literal.fontColor = toHexa(fillColor);
         // Fonts managed by print server: COURIER, HELVETICA, TIMES_ROMAN
@@ -457,8 +485,11 @@
         literal.fontWeight = 'normal'; //fontValues[0];
         literal.label = textStyle.getText();
         literal.labelAlign = textStyle.getTextAlign();
-        literal.labelOutlineColor = toHexa(strokeColor);
-        literal.labelOutlineWidth = textStyle.getStroke().getWidth();
+        if (textStyle.getStroke()) {
+          literal.labelOutlineColor = toHexa(ol.color.asArray(
+              textStyle.getStroke().getColor()));
+          literal.labelOutlineWidth = textStyle.getStroke().getWidth();
+        }
         literal.fillOpacity = 0.0;
         literal.pointRadius = 0;
       }

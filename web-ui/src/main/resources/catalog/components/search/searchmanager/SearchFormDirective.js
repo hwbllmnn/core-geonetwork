@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 (function() {
   goog.provide('gn_search_form_controller');
 
@@ -14,12 +37,14 @@
   goog.require('gn_facets');
   goog.require('gn_search_form_results_directive');
   goog.require('gn_selection_directive');
+  goog.require('search_filter_tags_directive');
 
   var module = angular.module('gn_search_form_controller', [
     'gn_catalog_service',
     'gn_facets',
     'gn_selection_directive',
-    'gn_search_form_results_directive'
+    'gn_search_form_results_directive',
+    'search_filter_tags_directive'
   ]);
 
   /**
@@ -39,14 +64,33 @@
     /** State of the facets of the current search */
     $scope.currentFacets = [];
 
-    /** Object were are stored result search information */
+    /** Object where are stored result search information */
     $scope.searchResults = {
       records: [],
-      count: -1
+      count: -1,
+      selectionBucket:
+          $scope.searchObj.selectionBucket ||
+          (Math.random() + '').replace('.', '')
     };
+    $scope.finalParams = {};
 
     $scope.searching = 0;
     $scope.paginationInfo = $scope.paginationInfo || {};
+
+    /**
+     * Return the current search parameters.
+     **/
+    this.getSearchParams = function() {
+      return $scope.searchObj.params;
+    };
+
+    this.getFinalParams = function() {
+      return $scope.finalParams;
+    };
+
+    this.getSearchResults = function() {
+      return $scope.searchResults;
+    };
 
     /**
      * Tells if there is a pagination directive nested to this one.
@@ -62,6 +106,8 @@
         self.resetPagination();
       }
     };
+
+
 
     /**
      * Reset pagination 'from' and 'to' params and merge them
@@ -101,6 +147,25 @@
           $scope.searchObj.params,
           defaultParams);
 
+      // Add hidden filters which may
+      // restrict search (do not add an existing filter)
+      if ($scope.searchObj.filters) {
+        angular.forEach($scope.searchObj.filters,
+            function(value, key) {
+              var p = $scope.searchObj.params[key];
+              if (p) {
+                if (p !== value && (!p.indexOf || p.indexOf(value) === -1)) {
+                  if (!angular.isArray(p)) {
+                    $scope.searchObj.params[key] = [p];
+                  }
+                  $scope.searchObj.params[key].push(value);
+                }
+              } else {
+                $scope.searchObj.params[key] = value;
+              }
+            });
+      }
+
       // Set default pagination if not set
       if ((!keepPagination &&
           !$scope.searchObj.permalink) ||
@@ -123,10 +188,12 @@
             gnFacetService.getParamsFromFacets($scope.currentFacets));
       }
 
+      params.bucket = $scope.searchResults.selectionBucket || 'metadata';
+
       var finalParams = angular.extend(params, hiddenParams);
+      $scope.finalParams = finalParams;
       gnSearchManagerService.gnSearch(finalParams).then(
           function(data) {
-            $scope.searching--;
             $scope.searchResults.records = [];
             for (var i = 0; i < data.metadata.length; i++) {
               $scope.searchResults.records.push(new Metadata(data.metadata[i]));
@@ -136,8 +203,7 @@
             $scope.searchResults.dimension = data.dimension;
 
             // compute page number for pagination
-            if ($scope.searchResults.records.length > 0 &&
-                $scope.hasPagination) {
+            if ($scope.hasPagination) {
 
               var paging = $scope.paginationInfo;
 
@@ -158,7 +224,9 @@
                   );
               paging.from = (paging.currentPage - 1) * paging.hitsPerPage + 1;
             }
-          });
+          }).finally(function() {
+        $scope.searching--;
+      });
     };
 
 
@@ -291,10 +359,15 @@
       $scope.controller.resetSearch(searchParams);
     });
 
+    $scope.$on('search', function() {
+      $scope.triggerSearch();
+    });
+
     $scope.$on('clearResults', function() {
       $scope.searchResults = {
         records: [],
-        count: 0
+        count: 0,
+        selectionBucket: $scope.searchObj.selectionBucket
       };
     });
 
@@ -311,6 +384,11 @@
     'gnSearchLocation'
   ];
 
+  /**
+   * Possible attributes:
+   *  * runSearch: run search inmediately after the  directive is loaded.
+   *  * waitForUser: wait until a user id is available to trigger the search.
+   */
   module.directive('ngSearchForm', [
     'gnSearchLocation',
     function(gnSearchLocation) {
@@ -322,13 +400,25 @@
         link: function(scope, element, attrs) {
 
           scope.resetSearch = function(htmlElementOrDefaultSearch) {
-            //TODO: remove geocat ref
-            $('.geocat-search').find('.bootstrap-tagsinput .tag').remove();
             if (angular.isObject(htmlElementOrDefaultSearch)) {
               scope.controller.resetSearch(htmlElementOrDefaultSearch);
             } else {
               scope.controller.resetSearch();
               $(htmlElementOrDefaultSearch).focus();
+            }
+          };
+
+          var waitForPagination = function() {
+            // wait for pagination to be set before triggering search
+            if (element.find('[data-gn-pagination]').length > 0) {
+              var unregisterFn = scope.$watch('hasPagination', function() {
+                if (scope.hasPagination) {
+                  scope.triggerSearch(true);
+                  unregisterFn();
+                }
+              });
+            } else {
+              scope.triggerSearch(false);
             }
           };
 
@@ -344,16 +434,17 @@
                   gnSearchLocation.getParams());
             }
 
-            // wait for pagination to be set before triggering search
-            if (element.find('[data-gn-pagination]').length > 0) {
-              var unregisterFn = scope.$watch('hasPagination', function() {
-                if (scope.hasPagination) {
-                  scope.triggerSearch(true);
-                  unregisterFn();
+            if (attrs.waitForUser === true) {
+              var userUnwatch = scope.$watch('user.id', function(userNewVal) {
+                // Don't trigger the search until the user id has been loaded
+                // Unregister the watch once we have the user id.
+                if (angular.isDefined(userNewVal)) {
+                  waitForPagination();
+                  userUnwatch();
                 }
               });
             } else {
-              scope.triggerSearch(false);
+              waitForPagination();
             }
           }
         }

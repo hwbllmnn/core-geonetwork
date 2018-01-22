@@ -1,6 +1,41 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 (function() {
   goog.provide('gn_editor_controller');
 
+
+
+
+
+
+
+
+
+
+
+
+  goog.require('gn_batchedit_controller');
   goog.require('gn_directory_controller');
   goog.require('gn_editorboard_controller');
   goog.require('gn_fields');
@@ -14,16 +49,16 @@
 
   var module = angular.module('gn_editor_controller',
       ['gn_fields', 'gn_new_metadata_controller',
-       'gn_import_controller',
+       'gn_import_controller', 'gn_batchedit_controller',
        'gn_editorboard_controller', 'gn_share',
        'gn_directory_controller', 'gn_utility_directive',
        'gn_scroll_spy', 'gn_thesaurus', 'ui.bootstrap.datetimepicker',
-       'ngRoute', 'gn_mdactions_service']);
+       'ngRoute', 'gn_mdactions_service', 'pascalprecht.translate']);
 
   var tplFolder = '../../catalog/templates/editor/';
 
-  module.config(['$routeProvider',
-    function($routeProvider) {
+  module.config(['$routeProvider', 'gnGlobalSettings',
+    function($routeProvider, gnGlobalSettings) {
 
 
       $routeProvider.
@@ -37,7 +72,7 @@
             templateUrl: tplFolder + 'editor.html',
             controller: 'GnEditorController'}).
           when('/create', {
-            templateUrl: tplFolder + 'new-metadata.html',
+            templateUrl: gnGlobalSettings.gnCfg.mods.editor.createPageTpl,
             controller: 'GnNewMetadataController'}).
           when('/create/from/:id/in/:group', {
             templateUrl: tplFolder + 'editor.html',
@@ -60,6 +95,9 @@
           when('/import', {
             templateUrl: tplFolder + 'import.html',
             controller: 'GnImportController'}).
+          when('/batchedit', {
+            templateUrl: tplFolder + 'batchedit.html',
+            controller: 'GnBatchEditController'}).
           when('/board', {
             templateUrl: tplFolder + 'editorboard.html',
             controller: 'GnEditorBoardController'}).
@@ -77,20 +115,22 @@
     'gnEditor', 'gnSearchManagerService', 'gnSchemaManagerService',
     'gnConfigService', 'gnUtilityService', 'gnOnlinesrc',
     'gnCurrentEdit', 'gnConfig', 'gnMetadataActions', 'Metadata',
-    function($q, $scope, $routeParams, $http, $rootScope, 
+    'gnValidation',
+    function($q, $scope, $routeParams, $http, $rootScope,
         $translate, $compile, $timeout, $location,
         gnEditor, gnSearchManagerService, gnSchemaManagerService,
         gnConfigService, gnUtilityService, gnOnlinesrc,
-        gnCurrentEdit, gnConfig, gnMetadataActions, Metadata) {
+        gnCurrentEdit, gnConfig, gnMetadataActions, Metadata,
+        gnValidation) {
       $scope.savedStatus = null;
       $scope.savedTime = null;
       $scope.formId = null;
       $scope.savedStatus = null;
       $scope.metadataFound = true;
       $scope.gnConfig = gnConfig;
-      $scope.gnSchemaConfig = {};
       $scope.unsupportedSchema = false;
       $scope.gnOnlinesrc = gnOnlinesrc;
+      $scope.redirectUrl = null;
 
       /**
        * Animation duration for slide up/down
@@ -109,6 +149,7 @@
           var button = $('#gn-view-menu-' + gnCurrentEdit.id);
           if (button) {
             menu.append(button);
+            $compile(button)($scope);
           }
         }
       };
@@ -129,15 +170,16 @@
             }).then(function(data) {
               $scope.metadataFound = data.count !== '0';
               $scope.metadataNotFoundId = $routeParams.id;
+              $scope.id = $routeParams.id;
 
               $scope.mdSchema = data.metadata[0]['geonet:info'].schema;
-              $scope.mdCategories = [];
+              $scope.mdCategories = {values: []};
               var categories = data.metadata[0].category;
               if (categories) {
                 if (angular.isArray(categories)) {
-                  $scope.mdCategories = categories;
+                  $scope.mdCategories.values = categories;
                 } else {
-                  $scope.mdCategories.push(categories);
+                  $scope.mdCategories.values.push(categories);
                 }
               }
 
@@ -145,37 +187,15 @@
               $scope.mdTitle = data.metadata[0].title ||
                   data.metadata[0].defaultTitle;
 
-              if ($scope.mdSchema === 'fgdc-std' ||
-                  $scope.mdSchema === 'iso19115') {
-                $scope.unsupportedSchema = true;
-                return;
-              }
-
-              // Set default schema configuration in case none is defined
-              var config =
-                  gnConfig['metadata.editor.schemaConfig'][$scope.mdSchema];
-              if (!config) {
-                config = {
-                  displayToolTip: false
-                };
-              }
               // Get the schema configuration for the current record
-              gnCurrentEdit.schemaConfig = $scope.gnSchemaConfig = config;
               gnCurrentEdit.metadata = new Metadata(data.metadata[0]);
-
+              $scope.redirectUrl = $location.search()['redirectUrl'];
 
               if ($scope.metadataFound) {
 
                 // Default view to display is default
+                // it may be overriden by route params or custom function
                 var defaultTab = 'default';
-
-                // It may be overriden by schema configuration
-                // that user can change in the administration
-                // interface > settings > standard config
-                if (gnCurrentEdit.schemaConfig &&
-                    gnCurrentEdit.schemaConfig.defaultTab) {
-                  defaultTab = gnCurrentEdit.schemaConfig.defaultTab;
-                }
 
 
                 // It may be overriden by an application
@@ -209,10 +229,11 @@
                 angular.extend(gnCurrentEdit, {
                   id: $routeParams.id,
                   formId: '#gn-editor-' + $routeParams.id,
+                  containerId: '#gn-editor-container-' + $routeParams.id,
                   tab: $routeParams.tab || defaultTab,
                   displayAttributes: $routeParams.displayAttributes === 'true',
-                  displayTooltips:
-                      gnCurrentEdit.schemaConfig.displayToolTip === true,
+                  displayTooltips: $routeParams.displayTooltips === 'true',
+                  displayTooltipsMode: $routeParams.displayTooltipsMode || '',
                   compileScope: $scope,
                   formScope: $scope.$new(),
                   sessionStartTime: moment(),
@@ -227,14 +248,27 @@
                 // Create URL for loading the metadata form
                 // appending a random int in order to avoid
                 // caching by route.
-                $scope.editorFormUrl = gnEditor
-                  .buildEditUrlPrefix('md.edit') + '&starteditingsession=yes&' +
+                var editorFormUrl = gnEditor
+                    .buildEditUrlPrefix('editor') +
+                    '&starteditingsession=yes&' +
                     '_random=' + Math.floor(Math.random() * 10000);
+
+                if (gnCurrentEdit.displayAttributes === true) {
+                  editorFormUrl += '&displayAttributes=true';
+                }
+
+                if (gnCurrentEdit.displayTooltips === true) {
+                  editorFormUrl += '&displayTooltips=true';
+                }
+
+                gnEditor.load(editorFormUrl).then(function() {
+                  // $scope.onFormLoad();
+                });
 
                 window.onbeforeunload = function() {
                   // TODO: could be better to provide
                   // cancelAndClose and saveAndClose button
-                  return $translate('beforeUnloadEditor',
+                  return $translate.instant('beforeUnloadEditor',
                       {timeAgo: moment(gnCurrentEdit.savedTime).fromNow()});
                 };
               }
@@ -264,6 +298,19 @@
             });
           }
         });
+      };
+
+      /**
+       * Update textarea containing XML when the ACE editor change.
+       * See form-builder-xml.xsl.
+       */
+      $scope.xmlEditorChange = function(e) {
+        // TODO: Here we could check if XML is valid based on ACE info
+        // and disable save action ?
+        $('textarea[name=data]').val(e[1].getSession().getValue());
+      };
+      $scope.xmlEditorLoaded = function(e) {
+        // TODO: Adjust height of editor based on screen size ?
       };
 
       $scope.startVersioning = function() {
@@ -346,9 +393,16 @@
           // and the newly created attributes.
           // Save to not lose current edits in main field.
           return gnEditor.save(false)
-            .then(function() {
+              .then(function() {
                 gnEditor.add(gnCurrentEdit.id, ref, name,
                     insertRef, position, attribute);
+              }, function(rejectedValue) {
+                $rootScope.$broadcast('StatusUpdated', {
+                  title: $translate.instant('runServiceError'),
+                  error: rejectedValue,
+                  timeout: 0,
+                  type: 'danger'
+                });
               });
         } else {
           return gnEditor.add(gnCurrentEdit.id, ref, name,
@@ -369,10 +423,11 @@
         $scope.setTemplate(!$scope.isTemplate());
         return $scope.save(refreshForm);
       };
+
       $scope.save = function(refreshForm) {
         $scope.saveError = false;
         var promise = gnEditor.save(refreshForm)
-          .then(function(form) {
+            .then(function(form) {
               $scope.savedStatus = gnCurrentEdit.savedStatus;
               $scope.saveError = false;
               $scope.toggleAttributes();
@@ -380,7 +435,7 @@
               $scope.savedStatus = gnCurrentEdit.savedStatus;
               $scope.saveError = true;
               $rootScope.$broadcast('StatusUpdated', {
-                title: $translate('saveMetadataError'),
+                title: $translate.instant('saveMetadataError'),
                 error: error,
                 timeout: 0,
                 type: 'danger'});
@@ -392,60 +447,123 @@
         $scope.layout.hideTopToolBar = false;
         // Close the editor tab
         window.onbeforeunload = null;
-        // Go to editor home
-        $location.path('');
-        // Tentative to close the browser tab
-        window.close();
-        // This last point may trigger
-        // "Scripts may close only the windows that were opened by it."
-        // when the editor was not opened by a script.
+
+        // if there is no history, attempt to close tab
+        if ($scope.redirectUrl != null) {
+          window.location.replace($scope.redirectUrl);
+        } else if (window.history.length == 1) {
+          window.close();
+          // This last point may trigger
+          // "Scripts may close only the windows that were opened by it."
+          // when the editor was not opened by a script.
+        } else {
+          window.history.back();
+        }
       };
 
       $scope.cancel = function(refreshForm) {
         $scope.savedStatus = gnCurrentEdit.savedStatus;
-        return gnEditor.cancel(refreshForm)
-          .then(function(form) {
-              // Refresh editor form after cancel
-              //  $scope.savedStatus = gnCurrentEdit.savedStatus;
-              //  $rootScope.$broadcast('StatusUpdated', {
-              //    title: $translate('cancelMetadataSuccess')
-              //  });
-              //  gnEditor.refreshEditorForm(null, true);
-              closeEditor();
-            }, function(error) {
-              $scope.savedStatus = gnCurrentEdit.savedStatus;
-              $rootScope.$broadcast('StatusUpdated', {
-                title: $translate('cancelMetadataError'),
-                error: error,
-                timeout: 0,
-                type: 'danger'});
-            });
+        if ($location.search()['justcreated']) {
+          // Remove newly created record
+          var md = gnCurrentEdit.metadata;
+          gnMetadataActions.deleteMd(md).
+              then(function(data) {
+                $rootScope.$broadcast('StatusUpdated', {
+                  title: $translate.instant('metadataRemoved',
+                  {title: md.title || md.defaultTitle}),
+                  timeout: 2
+                });
+                closeEditor();
+              }, function(reason) {
+                $rootScope.$broadcast('StatusUpdated', {
+                  title: $translate.instant(reason.data.error.message),
+                  timeout: 0,
+                  type: 'danger'
+                });
+              });
+
+        } else {
+          return gnEditor.cancel(refreshForm)
+              .then(function(form) {
+                // Refresh editor form after cancel
+                //  $scope.savedStatus = gnCurrentEdit.savedStatus;
+                //  $rootScope.$broadcast('StatusUpdated', {
+                //    title: $translate.instant('cancelMetadataSuccess')
+                //  });
+                //  gnEditor.refreshEditorForm(null, true);
+                closeEditor();
+              }, function(error) {
+                $scope.savedStatus = gnCurrentEdit.savedStatus;
+                $rootScope.$broadcast('StatusUpdated', {
+                  title: $translate.instant('cancelMetadataError'),
+                  error: error,
+                  timeout: 0,
+                  type: 'danger'});
+              });
+        }
+      };
+
+      function parseXmlError(error) {
+        if (error.indexOf('<?xml') === 0) {
+          var x = jQuery.parseXML(error),
+              d = x.getElementsByTagName('description'),
+              m = d[0].textContent;
+          return m;
+        }
+        return null;
       };
 
       $scope.close = function() {
-        var promise = gnEditor.save(false, false, true)
-          .then(function(form) {
+        // if auto unpublish is not set in the settings, or if MD is not
+        // published: close w/o confirmation
+        if (!$scope.gnCurrentEdit.metadata.isPublished() ||
+            !gnConfig['metadata.workflow.automaticUnpublishInvalidMd']) {
+          $scope.confirmClose();
+          return;
+        }
+
+        // else: do a mandatory validation check to ensure that if the MD is
+        // invalid, the user can decide to stay in the editor to fix it
+        gnValidation.errorCheck().then(function(hasErrors) {
+          // if record unpublish on save is enabled: ask for confirmation
+          // before saving and closing the editor
+          if (hasErrors) {
+            $('#confirm-editor-close').modal('show');
+          } else {
+            $scope.confirmClose();
+          }
+        });
+      };
+      $scope.confirmClose = function() {
+        var promise = gnEditor.save(false, null, true)
+            .then(function(form) {
               closeEditor();
             }, function(error) {
+              // When closing editor and if error occurs,
+              // the response is in XML. Try to get the message
+              message = parseXmlError(error);
+
               $rootScope.$broadcast('StatusUpdated', {
-                title: $translate('saveMetadataError'),
-                error: error,
+                title: message ?
+                message : $translate.instant('saveMetadataError'),
+                error: message ? undefined : error,
                 timeout: 0,
                 type: 'danger'});
+              closeEditor();
             });
         $scope.savedStatus = gnCurrentEdit.savedStatus;
         return promise;
       };
       $scope.getSaveStatus = function() {
         if (gnCurrentEdit.savedTime) {
-          return $scope.saveStatus = $translate('saveAtimeAgo',
+          return $scope.saveStatus = $translate.instant('saveAtimeAgo',
               {timeAgo: moment(gnCurrentEdit.savedTime).fromNow()});
         }
       };
       $scope.getCancelStatus = function() {
         if (gnCurrentEdit.sessionStartTime) {
           return $scope.cancelStatus =
-              $translate('cancelChangesFromNow', {
+              $translate.instant('cancelChangesFromNow', {
                 timeAgo: moment(gnCurrentEdit.sessionStartTime).fromNow()
               });
         }

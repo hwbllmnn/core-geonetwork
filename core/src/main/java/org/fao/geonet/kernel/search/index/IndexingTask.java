@@ -23,6 +23,9 @@
 
 package org.fao.geonet.kernel.search.index;
 
+import jeeves.server.context.ServiceContext;
+import jeeves.server.dispatchers.ServiceManager;
+
 import org.fao.geonet.ApplicationContextHolder;
 import org.fao.geonet.constants.Geonet;
 import org.fao.geonet.kernel.DataManager;
@@ -39,10 +42,9 @@ import java.util.Date;
 import java.util.Set;
 
 /**
- * A task which runs every X sec in order to reindex
- * a set of metadata records which have been modified and
- * that indexing could be done a bit later (eg. when popularity
- * is updated, immediate indexing is not required).
+ * A task which runs every X sec in order to reindex a set of metadata records which have been
+ * modified and that indexing could be done a bit later (eg. when popularity is updated, immediate
+ * indexing is not required).
  * <p/>
  * See configuration in config-spring-geonetwork.xml for interval.
  * <p/>
@@ -51,10 +53,11 @@ import java.util.Set;
 public class IndexingTask extends QuartzJobBean {
 
     @Autowired
-    private ConfigurableApplicationContext applicationContext;
+    protected ConfigurableApplicationContext applicationContext;
     @Autowired
-    private DataManager _dataManager;
-
+    protected DataManager _dataManager;
+    @Autowired
+    protected ServiceManager serviceManager;
 
     private void indexRecords() {
         ApplicationContextHolder.set(applicationContext);
@@ -63,15 +66,15 @@ public class IndexingTask extends QuartzJobBean {
         if (metadataIdentifiers.size() > 0) {
             if (Log.isDebugEnabled(Geonet.INDEX_ENGINE)) {
                 Log.debug(Geonet.INDEX_ENGINE, "Indexing task / List of records to index: "
-                        + metadataIdentifiers.toString() + ".");
+                    + metadataIdentifiers.toString() + ".");
             }
 
             for (Integer metadataIdentifier : metadataIdentifiers) {
                 try {
-                    _dataManager.indexMetadata(String.valueOf(metadataIdentifier), false);
+                    _dataManager.indexMetadata(String.valueOf(metadataIdentifier), false, null);
                 } catch (Exception e) {
                     Log.error(Geonet.INDEX_ENGINE, "Indexing task / An error happens indexing the metadata "
-                            + metadataIdentifier + ". Error: " + e.getMessage(), e);
+                        + metadataIdentifier + ". Error: " + e.getMessage(), e);
                 }
             }
             try {
@@ -83,10 +86,14 @@ public class IndexingTask extends QuartzJobBean {
     }
 
     @Override
-    protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
+    protected void executeInternal(JobExecutionContext jobContext) throws JobExecutionException {
+        ServiceContext serviceContext = serviceManager.createServiceContext("indexing", applicationContext);
+        serviceContext.setLanguage("eng");
+        serviceContext.setAsThreadLocal();
+
         if (Log.isDebugEnabled(Geonet.INDEX_ENGINE)) {
             Log.debug(Geonet.INDEX_ENGINE, "Indexing task / Start at: "
-                    + new Date() + ". Checking if any records need to be indexed ...");
+                + new Date() + ". Checking if any records need to be indexed ...");
         }
         indexRecords();
     }

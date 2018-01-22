@@ -27,6 +27,7 @@ package org.fao.geonet.services.metadata;
 import jeeves.constants.Jeeves;
 import jeeves.server.ServiceConfig;
 import jeeves.server.context.ServiceContext;
+
 import org.fao.geonet.GeonetContext;
 import org.fao.geonet.Util;
 import org.fao.geonet.constants.Geonet;
@@ -48,6 +49,7 @@ import java.nio.file.Path;
  *
  * For batch update see BatchNewOwner.
  */
+@Deprecated
 public class UpdateGroupOwner extends NotInReadOnlyModeService {
 
     /**
@@ -94,11 +96,11 @@ public class UpdateGroupOwner extends NotInReadOnlyModeService {
         metadataRepository.save(metadata);
 
         //--- index metadata
-        dataMan.indexMetadata(id, true);
+        dataMan.indexMetadata(id, true, null);
 
         //--- return id for showing
         return new Element(Jeeves.Elem.RESPONSE).
-                addContent(new Element(Geonet.Elem.ID).
-                        setText(id));
+            addContent(new Element(Geonet.Elem.ID).
+                setText(id));
     }
 }

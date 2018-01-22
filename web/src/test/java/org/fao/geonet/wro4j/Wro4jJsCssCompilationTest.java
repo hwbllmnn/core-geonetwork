@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 package org.fao.geonet.wro4j;
 
 import com.google.common.base.Predicate;
@@ -7,7 +30,7 @@ import org.fao.geonet.ApplicationContextHolder;
 import org.fao.geonet.Constants;
 import org.fao.geonet.GeonetMockServletContext;
 import org.fao.geonet.kernel.GeonetworkDataDirectory;
-import org.junit.Ignore;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.mock.web.MockFilterConfig;
@@ -21,6 +44,7 @@ import ro.isdc.wro.model.group.Group;
 import ro.isdc.wro.model.resource.Resource;
 import ro.isdc.wro.model.resource.ResourceType;
 
+import javax.servlet.FilterConfig;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -28,7 +52,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-import javax.servlet.FilterConfig;
 
 import static org.junit.Assert.assertTrue;
 
@@ -45,6 +68,7 @@ public class Wro4jJsCssCompilationTest {
         dataDirectory.setSchemaPluginsDir(webDir.resolve("WEB-INF/data/config/schema_plugins"));
         dataDirectory.setFormatterDir(webDir.resolve("WEB-INF/data/data/formatter"));
         GenericXmlApplicationContext applicationContext = new GenericXmlApplicationContext();
+        applicationContext.refresh();
         applicationContext.getBeanFactory().registerSingleton("geonetworkDataDirectory", dataDirectory);
         ApplicationContextHolder.set(applicationContext);
 
@@ -56,7 +80,7 @@ public class Wro4jJsCssCompilationTest {
         try (BufferedWriter writer = Files.newBufferedWriter(wroProperties, cs)) {
             for (String line : configuration) {
                 final String updatedLine = line.replace("${wroRefresh}", "-1").replace("${debugProcessors}", "").
-                        replace("${build.webapp.resources}", webDir.toString().replace("\\", "/"));
+                    replace("${build.webapp.resources}", webDir.toString().replace("\\", "/"));
                 writer.write(updatedLine);
                 writer.write("\n");
             }
@@ -75,15 +99,21 @@ public class Wro4jJsCssCompilationTest {
         wro4jModel = wro4jManager.getModelFactory().create();
     }
 
+    @AfterClass
+    static public void tearDown() {
+        Context.destroy();
+        ApplicationContextHolder.clear();
+    }
 
     @Test
     public void testCssCompilation() throws Exception {
         createModel();
         testResourcesOfType(ResourceType.CSS, Predicates.not(Predicates.or(
-                Predicates.equalTo("gn_viewer") // currently broken
-                )));
+            Predicates.equalTo("gn_viewer") // currently broken
+        )));
         testResourcesOfType(ResourceType.CSS, Predicates.<String>alwaysTrue());
     }
+
     @Test
     public void testJsCompilation() throws Exception {
         createModel();
@@ -115,7 +145,7 @@ public class Wro4jJsCssCompilationTest {
                 } catch (Throwable t) {
                     if (errors.length() == 0) {
                         errors.append("\n\nThe following errors were encountered while compiling the ").
-                                append(resourceType).append(" resources");
+                            append(resourceType).append(" resources");
                     }
 
                     errors.append("\n* Group Name: ").append(group.getName());

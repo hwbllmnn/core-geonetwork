@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 package org.geonetwork.http;
 
 import java.io.IOException;
@@ -21,10 +44,9 @@ import jeeves.server.dispatchers.ServiceManager;
 import jeeves.server.sources.http.JeevesServlet;
 
 /**
- * Add server time and session expiration time to cookie to
- * track on the client side if session is about to be cancelled.
- * If user is not authenticated, the server time is the same
- * as expiration time.
+ * Add server time and session expiration time to cookie to track on the client side if session is
+ * about to be cancelled. If user is not authenticated, the server time is the same as expiration
+ * time.
  *
  * Created by francois on 29/07/15.
  */
@@ -37,29 +59,15 @@ public class SessionTimeoutCookieFilter implements javax.servlet.Filter {
         HttpServletResponse httpResp = (HttpServletResponse) resp;
         HttpServletRequest httpReq = (HttpServletRequest) req;
         HttpSession session = httpReq.getSession(false);
-        
-        //We don't have already a session. Is it a real user?
-        if(session == null) {
-            String userAgent = httpReq.getHeader("user-agent");
-
-            Pattern regex = Pattern.compile(ServiceManager.BOT_REGEXP, 
-                    Pattern.CASE_INSENSITIVE);
-            Matcher m = regex.matcher(userAgent);
-            if(!m.find()) {
-                //It is not a bot, let's create a session
-                //FIXME: really? Should we? Can't we wait? Anonymous users need it?
-                session = httpReq.getSession(true);
-            }
-        }
 
         //If we are not being accessed by a bot/crawler
-        if(session != null) {
+        if (session != null) {
             long currTime = System.currentTimeMillis();
-    
+
             Cookie cookie = new Cookie("serverTime", "" + currTime);
             cookie.setPath("/");
             httpResp.addCookie(cookie);
-    
+
             UserSession userSession = null;
             if (session != null) {
                 Object tmp = session.getAttribute(JeevesServlet.USER_SESSION_ATTRIBUTE_KEY);
@@ -77,7 +85,7 @@ public class SessionTimeoutCookieFilter implements javax.servlet.Filter {
             cookie.setPath("/");
             httpResp.addCookie(cookie);
         }
-    
+
         filterChain.doFilter(req, resp);
     }
 

@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 (function() {
   'use strict';
   goog.provide('gn_schematronadminservice');
@@ -72,7 +95,7 @@
         remove: function(criteria, group) {
           $http({
             method: 'GET',
-            url: 'admin.schematroncriteria.delete@json',
+            url: 'admin.schematroncriteria.delete?_content_type=json',
             params: {
               id: criteria.id
             }
@@ -91,7 +114,7 @@
         update: function(updated, original, group) {
           $http({
             method: 'POST',
-            url: 'admin.schematroncriteria.update@json',
+            url: 'admin.schematroncriteria.update?_content_type=',
             params: {
               id: original.id,
               type: updated.type,
@@ -110,7 +133,7 @@
         add: function(criteria, original, group) {
           $http({
             method: 'POST',
-            url: 'admin.schematroncriteria.add@json',
+            url: 'admin.schematroncriteria.add?_content_type=json',
             params: {
               type: criteria.type,
               value: criteria.value,
@@ -140,7 +163,7 @@
         remove: function(group, groupList, successCallback) {
           $http({
             method: 'GET',
-            url: 'admin.schematroncriteriagroup.delete@json',
+            url: 'admin.schematroncriteriagroup.delete?_content_type=json',
             params: {
               groupName: group.id.name,
               schematronId: group.id.schematronid
@@ -170,7 +193,7 @@
           }
           $http({
             method: 'GET',
-            url: 'admin.schematroncriteriagroup.update@json',
+            url: 'admin.schematroncriteriagroup.update?_content_type=json',
             params: params
           }).success(function() {
             original.id.name = updated.id.name;
@@ -183,7 +206,7 @@
         add: function(group, groupList, successCallback) {
           $http({
             method: 'GET',
-            url: 'admin.schematroncriteriagroup.add@json',
+            url: 'admin.schematroncriteriagroup.add?_content_type=json',
             params: {
               groupName: group.id.name,
               schematronId: group.id.schematronid,
@@ -204,7 +227,7 @@
           } else {
             $http({
               method: 'GET',
-              url: 'admin.schematroncriteriagroup.list@json',
+              url: 'admin.schematroncriteriagroup.list?_content_type=json',
               params: {
                 includeCriteria: true,
                 schematronId: schematronId
@@ -229,7 +252,7 @@
           oldPriority = lowerPriority.displaypriority;
           update1 = $http({
             method: 'GET',
-            url: 'admin.schematron.update@json',
+            url: 'admin.schematron.update?_content_type=json',
             params: {
               id: higherPriority.id,
               displaypriority: oldPriority
@@ -237,7 +260,7 @@
           });
           update2 = $http({
             method: 'GET',
-            url: 'admin.schematron.update@json',
+            url: 'admin.schematron.update?_content_type=json',
             params: {
               id: lowerPriority.id,
               displaypriority: newPriority
@@ -257,7 +280,7 @@
           if (cachedCriteriaTypes) {
             successCallback(cachedCriteriaTypes);
           } else {
-            $http.get('admin.schematrontype@json').
+            $http.get('admin.schematrontype?_content_type=json').
                 success(function(data) {
                   putDataIntoCache('criteriaTypes', data);
                   angular.forEach(data.schemas, function(schema) {
@@ -266,7 +289,7 @@
                   successCallback(data);
                 }).error(function(data) {
                   alert('An Error occurred with the ' +
-                      'admin.schematrontype@json ' +
+                      'admin.schematrontype ' +
                       ' request:' + data);
                 });
           }

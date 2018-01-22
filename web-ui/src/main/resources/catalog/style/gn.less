@@ -6,7 +6,7 @@
 @import (less) "../lib/angular.ext/hotkeys/hotkeys.min.css";
 @import "../lib/bootstrap.ext/tagsinput/bootstrap-tagsinput.less";
 // import the css files as less files so they are included in the final output of wro4j
-@import (less) "../lib/bootstrap.ext/datepicker/datepicker.css";
+@import "../lib/bootstrap.ext/datepicker/datepicker.less";
 @import (less) "../lib/style/datetimepicker.css";
 @import "gn_doc.less";
 @import "gn_icons.less";
@@ -23,18 +23,8 @@ div[gn-transfer-ownership] * .list-group {
 }
 
 .gn-pager {
-  .pager {
+  .pagination {
     margin: 0;
-    text-align: left;
-    display: inline-block;
-    li > a {
-      padding: 2px 5px;
-      border-radius: 6px;
-      font-size: 120%;
-    }
-    em {
-      font-style: normal;
-    }
   }
 }
 
@@ -63,7 +53,15 @@ div[gn-transfer-ownership] * .list-group {
   line-height: 1.33;
   border-radius: 35px;
 }
-
+// help button
+[data-gn-need-help] {
+  margin-top: 10px;
+}
+.panel-heading {
+  [data-gn-need-help] {
+    margin-top: 0;
+  }
+}
 
 
 /* An update to 3.2 could provide responsive class
@@ -97,6 +95,38 @@ div[gn-transfer-ownership] * .list-group {
   }
 }
 
+.gn-sub-bar {
+  background-color: #fff;
+  padding: 10px 0;
+  margin-bottom: 10px;
+  border: 1px solid #e7e7e7;
+  border-top: 0;
+  z-index: 5;
+}
+[ng-app="gn_editor"] {
+  .gn-top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    height: 52px;
+  }
+  .gn-sub-bar {
+    position: fixed;
+    top: 52px;
+    left: 20px;
+    right: 20px;
+  }
+  .gn-editor-board {
+    padding-top: 120px;
+  }
+  .gn-editor-container, .gn-batch-editor, #gn-directory-container,
+  #gn-new-metadata-container, #gn-import-container {
+    padding-top: 70px;
+  }
+}
+
 a {
   word-wrap: break-word;
 }
@@ -121,6 +151,29 @@ a {
 
 [gn-img-modal], [data-gn-img-modal] {
   cursor: pointer;
+
+}
+.gn-img-modal {
+  width: 95vw;
+
+  img {
+    width: 100%
+  }
+  .gn-img-background {
+    background-image: linear-gradient(to bottom,transparent,rgba(0,0,0,0.74));
+    bottom: 0;
+    height: 60px;
+    position: absolute;
+    width: 100%;
+  }
+  .gn-img-thumbnail-caption {
+    line-height: 24px;
+    max-height: 48px;
+    overflow: hidden;
+    margin-bottom: 4px;
+    width: 100%;
+    font-size: 150%;
+  }
 }
 .gn-btn-modal-img {
   position: absolute;
@@ -155,7 +208,12 @@ a {
  * Logo in nav bar can't be big
  */
 .gn-logo {
-  max-height: 23px;
+  max-height: 28px;
+  margin: -8px 0px;
+}
+
+.gn-logo-lg {
+  width: 160px !important;
 }
 
 /**
@@ -180,7 +238,7 @@ div.gn-scroll-spy {
   border-top-left-radius: @panel-border-radius;
   border-top: 1px solid @panel-default-border;
   border-left: 1px solid @panel-default-border;
-  
+
   button {
     .pull-right();
   }
@@ -222,7 +280,6 @@ div.gn-scroll-spy {
   li.disabled {
     cursor: not-allowed !important;
   }
-
   li.disabled {
     a {
       pointer-events: none;
@@ -260,23 +317,67 @@ div.gn-scroll-spy {
   }
 }
 
-.onlinesrc-popup {
+.onlinesrc-popup, .gn-modal-lg {
   max-width: none;
   max-height: none;
   display: none;
+  .modal-content {
+    width: 90vw;
+    max-height: 90vh;
+    .modal-body {
+      max-height: 76vh;
+      overflow: auto;
+      min-height: 500px;
+    }
+  }
+  .modal-dialog {
+    margin: 10px 5vw;
+
+    .list-group-item {
+      word-wrap: break-word;
+    }
+  }
 }
-.onlinesrc-popup .modal-content {
-  width: 750px;
+.gn-save-invalid-modal {
+  max-width: none;
+  max-height: none;
 }
 img.thumb-small {
-max-width: 80px;
-max-height: 80px;
-min-height: 40px;
+  max-width: 100%;
+  max-height: 80px;
+  min-height: 40px;
+}
+.gn-list-thumb {
+  position: relative;
+  margin: 2px;
+  width: 32%;
+  height: 92px;
+  a.onlinesrc-remove {
+    position: absolute;
+    z-index: 99;
+    top: 0px;
+    right: 0px;
+  }
+  a.onlinesrc-edit {
+    position: absolute;
+    z-index: 99;
+    top: 0px;
+    right: 20px;
+  }
+  a {
+    text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+  }
 }
 .gn-layers-grid-container {
-overflow:auto;
-max-height:200px;
-font-size: small;
+  overflow:auto;
+  max-height:200px;
+  font-size: small;
+
+  tr.success {
+    td {
+      font-weight: bold;
+    }
+  }
 }
 .gn-layers-grid-container tr {
   cursor: pointer;
@@ -318,17 +419,9 @@ font-size: small;
   width: inherit;
 }
 
-/* Do not show scrollbar as this dropdown contains
-   dropdown button (eg. for choosing contact role)
-   whose content will not be displayed properly
-   with a scrollbar. */
-*[data-gn-directory-entry-selector] .tt-dropdown-menu {
-  overflow: visible;
-}
-
 .tt-suggestion {
   padding: 3px 20px;
-  font-size: 18px;
+  font-size: 1em;
   line-height: 24px;
 }
 
@@ -455,8 +548,9 @@ input[type=file] {
 }
 
 .gn-recordtype-n:before { content: @fa-var-file-text }
-.gn-recordtype-s:before { content: @fa-var-bookmark-o }
+.gn-recordtype-s:before { content: @fa-var-bookmark }
 .gn-recordtype-y:before { content: @fa-var-file-o }
+.gn-recordtype-t:before { content: @fa-var-bookmark-o }
 
 [data-gn-slide-toggle] {
   padding-left: 20px;
@@ -493,11 +587,11 @@ i.fa-times.delete:hover {
 
 .gn-search-page {
   .gn-status {
-    border: 3px solid darken(@brand-info, 5%);
+    border: 2px solid darken(@brand-info, 5%);
     position: absolute;
     top: 95px;
     left: 2px;
-    border-radius: 15px;
+    border-radius: 6px;
     padding: 2px;
     -ms-transform: rotate(-30deg);
     -webkit-transform: rotate(-30deg);
@@ -508,7 +602,7 @@ i.fa-times.delete:hover {
     background-color: rgba(255, 255, 255 , 0.7);
   }
   .gn-status-mdview {
-    font-size: 120%;
+    font-size: 110%;
     position: relative;
     float: right;
     top: -52px;
@@ -553,4 +647,258 @@ html[lang=fre] {
 .checkbox.disabled label, .radio.disabled label, fieldset[disabled] .checkbox label, fieldset[disabled] .radio label {
   cursor: not-allowed;
   color: #d3d3d3;
+}
+
+button, .btn, .btn:active, a {
+  &:focus {
+    outline: none;
+  }
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: gray;
+  border-radius: 4px;
+}
+
+.gn-bbox-input {
+  input {
+    width: 6em;
+    display: inline-block;
+  }
+  [class^='col-'] {
+    text-align: center;
+  }
+  [ngeo-btn-group] {
+    padding:0;
+  }
+  .form-group {
+    margin-bottom: 10px;
+  }
+}
+
+.popover {
+  height: auto;
+  border-radius: 2px;
+  font-size: 12px;
+  .popover-content {
+    display: table-cell;
+    vertical-align: middle;
+    ul {
+      margin: 0;
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      font-size: 12px;
+      padding: 2px 5px;
+      border-left: none;
+      border-right: none;
+      border-radius: 0;
+      &:first-child { border-top: none; }
+      &:last-child { border-bottom: none; }
+      input[type="range"] {
+        display: block;
+        width: 100px;
+      }
+    }
+  }
+  &.popover-dropdown-2 .popover-content {
+    height: 8em;
+  }
+  &.popover-dropdown-3 .popover-content {
+    height: 10.5em;
+  }
+  &.popover-dropdown-4 .popover-content {
+    height: 13em;
+  }
+  &.popover-dropdown-5 .popover-content {
+    height: 15.5em;
+  }
+  .popover-content > .dropdown-menu {
+    position: static;
+    box-shadow: none;
+    border: none;
+    padding: 0 0 1em;
+  }
+  .btn-group .dropdown-menu {
+    margin-top: 0;
+  }
+}
+
+input.ng-invalid {
+  border-color: #a94442;
+}
+
+.gn-input-clear {
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  transform: translate(0, -50%);
+  cursor: pointer;
+  opacity: 0.4;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+/* Highlight updated checkboxes in sharing form */
+.gn-sharing-batch {
+  input.ng-dirty:after {
+    content: "*";
+    padding-left: 12px;
+  }
+}
+
+[data-rating] {
+  color: #ffa500;
+}
+
+[data-gn-saved-selections-panel] {
+  fieldset legend {
+    font-size: 14px;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+    padding-top: 10px;
+  }
+
+  ul {
+    margin: 2px;
+    li {
+      font-size: 13px;
+      border: none;
+      padding: 2px 0px;
+    }
+  }
+}
+
+.gn-multilingual-field {
+  .nav > li > a {
+    padding: 2px 5px;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .label {
+    line-height: 2;
+    font-size: 11px;
+  }
+  .no-data a {
+    color: @gray-light;
+  }
+}
+
+
+.navbar {
+  margin-bottom: 14px;
+  .navbar-brand {
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 50px;
+    font-size: 16px;
+  }
+
+  // handle hover dropdowns for editor and admin menu (only if not on mobile)
+  @media (min-width: @screen-sm-min) {
+    li.dropdown-hover {
+      & > .dropdown-toggle {
+        position: relative;
+        &:after {
+          font-family: FontAwesome;
+          content: "\f0d7";
+          position: absolute;
+          bottom: -5px;
+          left: 50%;
+          transform: translate(-50%, 0);
+          font-size: 0.9em;
+        }
+      }
+      &.open:not(.active) > .dropdown-toggle {
+        background: none;
+      }
+      ul {
+        display: none;
+      }
+      &:hover ul, & > a:focus + ul, & > a:active + ul {
+        display: block;
+      }
+    }
+  }
+
+  .gn-user-info {
+    display: inline-block;
+    vertical-align: middle;
+    margin: -6px 0px;
+    line-height: 1em;
+    .gn-user-role {
+      text-transform: uppercase;
+      opacity: 0.7;
+      font-size: 0.8em;
+    }
+  }
+}
+.navbar-form {
+  border:none;
+  margin: 8px 0px;
+}
+
+// styles for login popup in the navbar
+.signin-dropdown {
+  .dropdown-menu {
+    border-color: #e7e7e7;
+    .navbar-form {
+      .input-group {
+        .form-control {
+          min-width: 110px;
+        }
+      }
+    }
+  }
+}
+
+// general purpose layout helpers
+.pos-relative { position: relative; }
+.pos-absolute { position: absolute; }
+.spacer, .flex-spacer {
+  flex-grow: 0; flex-shrink: 0;
+  min-width: 0.7em; min-height: 0.7em;
+}
+.flex-grow { flex-grow: 1; }
+.flex-no-grow { flex-grow: 0; }
+.flex-shrink { flex-shrink: 1; }
+.flex-no-shrink, .fa { flex-shrink: 0; }
+.flex-row, .flex-col, .flex-row-r, .flex-col-r {
+  display: flex !important;
+  align-items: baseline;
+}
+.flex-col { flex-direction: column; }
+.flex-col-r { flex-direction: column-reverse; }
+.flex-row { flex-direction: row; }
+.flex-row-r { flex-direction: row-reverse; }
+.flex-start { justify-content: flex-start; }
+.flex-end { justify-content: flex-end; }
+.flex-center { justify-content: center; }
+.flex-align-center { align-items: center; }
+.flex-align-end { align-items: flex-end; }
+.flex-align-start { align-items: flex-start; }
+.flex-align-stretch { align-items: stretch; }
+.text-wrap { white-space: normal; }
+.text-nowrap, .text-no-wrap { white-space: nowrap; }
+.text-ellipsis { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.width-100 { width: 100%; } .width-75 { width: 75%; } .width-50 { width: 50%; }
+.width-25 { width: 25%; } .width-33 { width: 33%; } .width-66 { width: 66%; }
+
+
+html {
+  // As a side-effect of setting the @viewport in bootstrap,
+  // IE11 & Edge make the scrollbar overlap the content and automatically hide itself when not in use.
+  // Unfortunately, the auto-showing of the scrollbar is sometimes too sensitive,
+  // thus making it hard to click on stuff near the right edge of the page.
+  // So we add this style to force IE11 & Edge to use a "normal", non-overlapping, non-auto-hiding scrollbar.
+  // See https://github.com/twbs/bootstrap/issues/18543
+  // TODO Remove this if Bootstrap version is >= 4.0.0
+  -ms-overflow-style: scrollbar;
 }

@@ -1,3 +1,26 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 package org.fao.geonet.repository.specification;
 
 import java.util.ArrayList;
@@ -29,7 +52,7 @@ public final class GroupSpecs {
         return new Specification<Group>() {
             @Override
             public Predicate toPredicate(Root<Group> root,
-                    CriteriaQuery<?> query, CriteriaBuilder cb) {
+                                         CriteriaQuery<?> query, CriteriaBuilder cb) {
                 return getIsReserved(root, cb);
             }
         };
@@ -39,15 +62,15 @@ public final class GroupSpecs {
         return new Specification<Group>() {
             @Override
             public Predicate toPredicate(Root<Group> root,
-                    CriteriaQuery<?> query, CriteriaBuilder cb) {
+                                         CriteriaQuery<?> query, CriteriaBuilder cb) {
                 return cb.and(root.get(Group_.id).in(ids),
-                        cb.not(getIsReserved(root, cb)));
+                    cb.not(getIsReserved(root, cb)));
             }
         };
     }
 
     private static Predicate getIsReserved(Root<Group> root,
-            CriteriaBuilder cb) {
+                                           CriteriaBuilder cb) {
         int maxId = Integer.MIN_VALUE;
         for (ReservedGroup reservedGroup : ReservedGroup.values()) {
             if (maxId < reservedGroup.getId()) {
@@ -59,22 +82,22 @@ public final class GroupSpecs {
     }
 
     public static Specification<UserGroup> isEditorOrMore(
-            final Integer userId) {
+        final Integer userId) {
         return new Specification<UserGroup>() {
             @Override
             public Predicate toPredicate(Root<UserGroup> root,
-                    CriteriaQuery<?> query, CriteriaBuilder cb) {
+                                         CriteriaQuery<?> query, CriteriaBuilder cb) {
                 root.join(UserGroup_.group);
 
                 Predicate pred = cb
-                        .equal(root.get(UserGroup_.user).get(User_.id), userId);
+                    .equal(root.get(UserGroup_.user).get(User_.id), userId);
 
                 pred = cb
-                        .and(pred,
-                                cb.lessThanOrEqualTo(
-                                        root.get(UserGroup_.id)
-                                                .get(UserGroupId_.profile),
-                                        Profile.Editor));
+                    .and(pred,
+                        cb.lessThanOrEqualTo(
+                            root.get(UserGroup_.id)
+                                .get(UserGroupId_.profile),
+                            Profile.Editor));
 
                 return pred;
             }

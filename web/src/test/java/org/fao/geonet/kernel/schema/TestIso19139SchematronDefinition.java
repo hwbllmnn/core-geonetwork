@@ -1,12 +1,42 @@
+/*
+ * Copyright (C) 2001-2016 Food and Agriculture Organization of the
+ * United Nations (FAO-UN), United Nations World Food Programme (WFP)
+ * and United Nations Environment Programme (UNEP)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+ *
+ * Contact: Jeroen Ticheler - FAO - Viale delle Terme di Caracalla 2,
+ * Rome - Italy. email: geonetwork@osgeo.org
+ */
+
 package org.fao.geonet.kernel.schema;
 
+import org.fao.geonet.ApplicationContextHolder;
 import org.fao.geonet.domain.Pair;
 import org.fao.geonet.utils.Xml;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.xpath.XPath;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -23,7 +53,17 @@ import static org.junit.Assert.assertEquals;
  * <p/>
  * Created by Jesse on 1/31/14.
  */
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(inheritLocations = true, locations = {"classpath*:http-request-factory-context.xml"})
 public class TestIso19139SchematronDefinition extends AbstractSchematronTest {
+    @Autowired
+    protected ConfigurableApplicationContext _applicationContext;
+
+    @Before
+    public void setApplicationContextInApplicationHolder() {
+        ApplicationContextHolder.set(_applicationContext);
+    }
 
     @SuppressWarnings("unchecked")
     @Test
@@ -85,10 +125,10 @@ public class TestIso19139SchematronDefinition extends AbstractSchematronTest {
         final String ruleTitle = createRuleTitle(previouslyLoadedNodes.getKey());
 
         String errorDescription = "A problem was found with the rules in the schematron :'" +
-                                  file.getFileName() + "' \n\n";
+            file.getFileName() + "' \n\n";
 
         String fixExplanation =
-                "Each rule in a pattern must select different nodes in the metadata because,\n" +
+            "Each rule in a pattern must select different nodes in the metadata because,\n" +
                 "due to the nature of the generated XSLT, only one of the rules will be \n" +
                 "executed.  Therefore the context attribute of each rule must be unique.  \n" +
                 "There are two ways to  fix this problem.  \n" +
@@ -96,8 +136,8 @@ public class TestIso19139SchematronDefinition extends AbstractSchematronTest {
                 "        2. Put the rules in separate patterns\n\n";
 
         throw new AssertionError(errorDescription + titleOfRule + "\n\n\t selects one of the same nodes as" +
-                                 " another or the rules in the same " +
-                                 "pattern: \n\n\t" + ruleTitle + "\n\n" + fixExplanation);
+            " another or the rules in the same " +
+            "pattern: \n\n\t" + ruleTitle + "\n\n" + fixExplanation);
     }
 
     private String createRuleTitle(Element declaredRule) {
