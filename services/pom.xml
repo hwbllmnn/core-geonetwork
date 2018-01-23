@@ -32,6 +32,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>services</artifactId>
+  <groupId>org.geonetwork-opensource</groupId>
+  <version>3.4.2-SNAPSHOT</version>
   <name>GeoNetwork services</name>
 
   <dependencies>

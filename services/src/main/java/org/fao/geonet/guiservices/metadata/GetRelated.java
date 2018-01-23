@@ -23,21 +23,18 @@
 
 package org.fao.geonet.guiservices.metadata;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
-import jeeves.constants.Jeeves;
-import jeeves.interfaces.Service;
-import jeeves.server.ServiceConfig;
-import jeeves.server.context.ServiceContext;
-import jeeves.server.dispatchers.ServiceManager;
+import javax.servlet.http.HttpServletRequest;
 
 import org.fao.geonet.ApplicationContextHolder;
 import org.fao.geonet.Constants;
 import org.fao.geonet.GeonetContext;
 import org.fao.geonet.Util;
-import org.fao.geonet.api.records.MetadataUtils;
 import org.fao.geonet.constants.Edit;
 import org.fao.geonet.constants.Geonet;
 import org.fao.geonet.constants.Params;
@@ -73,13 +70,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 
-import javax.servlet.http.HttpServletRequest;
+import jeeves.constants.Jeeves;
+import jeeves.interfaces.Service;
+import jeeves.server.ServiceConfig;
+import jeeves.server.context.ServiceContext;
+import jeeves.server.dispatchers.ServiceManager;
 
 /**
  * Perform a search and return all children metadata record for current record.
@@ -152,9 +151,12 @@ import javax.servlet.http.HttpServletRequest;
 @Qualifier("getRelated")
 public class GetRelated implements Service, RelatedMetadata {
 
+    private ServiceConfig _config = new ServiceConfig();
     private static int maxRecords = 1000;
+    private static boolean forEditing = false, withValidationErrors = false, keepXlinkAttributes = false;
 
     public void init(Path appPath, ServiceConfig config) throws Exception {
+        _config = config;
     }
 
     /**
@@ -288,8 +290,7 @@ public class GetRelated implements Service, RelatedMetadata {
         Element md = Show.getCached(context.getUserSession(), id);
         if (md == null) {
             // Get from DB
-            md = dm.getMetadata(context, id, forEditing, withValidationErrors,
-                    keepXlinkAttributes);
+            md = dm.getMetadata(context, id, forEditing, withValidationErrors, keepXlinkAttributes);
         }
 
         String schemaIdentifier = dm.getMetadataSchema(id);
